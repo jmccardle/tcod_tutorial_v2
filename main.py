@@ -5,6 +5,7 @@ import game.engine
 import game.entity
 import game.game_map
 import game.input_handlers
+import game.procgen
 
 
 def main() -> None:
@@ -14,24 +15,25 @@ def main() -> None:
     map_width = 80
     map_height = 45
 
+    room_max_size = 10
+    room_min_size = 6
+    max_rooms = 30
+
     tileset = tcod.tileset.load_tilesheet(
         "data/dejavu10x10_gs_tc.png", 32, 8, tcod.tileset.CHARMAP_TCOD
     )
 
-    engine = game.engine.Engine(player=game.entity.Entity())
+    player = game.entity.Entity(x=0, y=0, char="@", color=(255, 255, 255))
+    engine = game.engine.Engine(player=player)
 
-    engine.game_map = game.game_map.GameMap(engine, map_width, map_height)
-    
-    # Create player and place in map
-    engine.player.place(int(screen_width / 2), int(screen_height / 2), engine.game_map)
-    engine.player.char = "@"
-    engine.player.color = (255, 255, 255)
-    
-    # Create an NPC
-    npc = game.entity.Entity()
-    npc.place(int(screen_width / 2 - 5), int(screen_height / 2), engine.game_map)
-    npc.char = "@"
-    npc.color = (255, 255, 0)
+    engine.game_map = game.procgen.generate_dungeon(
+        max_rooms=max_rooms,
+        room_min_size=room_min_size,
+        room_max_size=room_max_size,
+        map_width=map_width,
+        map_height=map_height,
+        engine=engine,
+    )
     
     # Part 10 refactoring: Track handler in main loop
     handler: game.input_handlers.BaseEventHandler = game.input_handlers.MainGameEventHandler(engine)

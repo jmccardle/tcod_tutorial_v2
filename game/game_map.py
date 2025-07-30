@@ -17,10 +17,7 @@ class GameMap:
         self.engine = engine
         self.width, self.height = width, height
         self.entities: Set[game.entity.Entity] = set()
-        self.tiles = np.full((width, height), fill_value=game.tiles.floor, order="F")
-        
-        # Create a simple test wall
-        self.tiles[30:33, 22] = game.tiles.wall
+        self.tiles = np.full((width, height), fill_value=game.tiles.wall, order="F")
 
     def get_blocking_entity_at_location(
         self,
