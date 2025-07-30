@@ -90,6 +90,8 @@ class EventHandler(BaseEventHandler):
             return False
 
         action.perform()
+
+        self.engine.update_fov()  # Update the FOV before the players next action.
         return True
 
     def on_render(self, console: tcod.console.Console) -> None:
