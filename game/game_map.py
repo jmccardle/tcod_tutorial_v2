@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, Set
 import numpy as np
 import tcod
 
-from game.tiles import wall
+from game.tiles import SHROUD, wall
 
 if TYPE_CHECKING:
     import game.engine
@@ -18,6 +18,9 @@ class GameMap:
         self.width, self.height = width, height
         self.entities: Set[game.entity.Entity] = set()
         self.tiles = np.full((width, height), fill_value=wall, order="F")
+
+        self.visible = np.full((width, height), fill_value=False, order="F")  # Tiles the player can currently see
+        self.explored = np.full((width, height), fill_value=False, order="F")  # Tiles the player has seen before
 
     def get_blocking_entity_at_location(
         self,
@@ -38,10 +41,17 @@ class GameMap:
         """
         Renders the map.
 
-        For now, we'll render all tiles as visible.
-        In Part 4 we'll add FOV.
+        If a tile is in the "visible" array, then draw it with the "light" colors.
+        If it isn't, but it's in the "explored" array, then draw it with the "dark" colors.
+        Otherwise, the default is "SHROUD".
         """
-        console.rgb[0 : self.width, 0 : self.height] = self.tiles["light"]
+        console.rgb[0 : self.width, 0 : self.height] = np.select(
+            condlist=[self.visible, self.explored],
+            choicelist=[self.tiles["light"], self.tiles["dark"]],
+            default=SHROUD,
+        )
 
         for entity in self.entities:
-            console.print(x=entity.x, y=entity.y, string=entity.char, fg=entity.color)
+            # Only print entities that are in the FOV
+            if self.visible[entity.x, entity.y]:
+                console.print(x=entity.x, y=entity.y, string=entity.char, fg=entity.color)
