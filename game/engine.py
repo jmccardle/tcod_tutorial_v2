@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import tcod
 
 import game.entity
 
+if TYPE_CHECKING:
+    import game.game_map
+
 
 class Engine:
+    game_map: game.game_map.GameMap
+    
     def __init__(self, player: game.entity.Entity):
         self.player = player
 
     def render(self, console: tcod.console.Console) -> None:
-        console.print(x=self.player.x, y=self.player.y, string=self.player.char, fg=self.player.color)
+        self.game_map.render(console)

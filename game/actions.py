@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-import game.engine
-import game.entity
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import game.engine
+    import game.entity
 
 
 class Action:
@@ -12,12 +15,14 @@ class Action:
     @property
     def engine(self) -> game.engine.Engine:
         """Return the engine this action belongs to."""
-        # In Part 1, we don't have gamemap yet, so we'll need a different approach
-        # This will be refactored in Part 2 when we add GameMap
-        raise NotImplementedError()
+        return self.entity.gamemap.engine
 
-    def perform(self, engine: game.engine.Engine) -> None:
+    def perform(self) -> None:
         """Perform this action with the objects needed to determine its scope.
+
+        `self.engine` is the scope this action is being performed in.
+
+        `self.entity` is the object performing the action.
 
         This method must be overridden by Action subclasses.
         """
@@ -25,7 +30,7 @@ class Action:
 
 
 class EscapeAction(Action):
-    def perform(self, engine: game.engine.Engine) -> None:
+    def perform(self) -> None:
         raise SystemExit()
 
 
@@ -36,15 +41,20 @@ class ActionWithDirection(Action):
         self.dx = dx
         self.dy = dy
 
-    def perform(self, engine: game.engine.Engine) -> None:
+    def perform(self) -> None:
         raise NotImplementedError()
 
 
 class MovementAction(ActionWithDirection):
-    def perform(self, engine: game.engine.Engine) -> None:
+    def perform(self) -> None:
         dest_x = self.entity.x + self.dx
         dest_y = self.entity.y + self.dy
 
-        # Check boundaries (hardcoded for Part 1, will be improved later)
-        if 0 <= dest_x < 80 and 0 <= dest_y < 50:
-            self.entity.move(self.dx, self.dy)
+        if not self.engine.game_map.in_bounds(dest_x, dest_y):
+            return  # Destination is out of bounds.
+        if not self.engine.game_map.tiles["walkable"][dest_x, dest_y]:
+            return  # Destination is blocked by a tile.
+        if self.engine.game_map.get_blocking_entity_at_location(dest_x, dest_y):
+            return  # Destination is blocked by an entity.
+
+        self.entity.move(self.dx, self.dy)
