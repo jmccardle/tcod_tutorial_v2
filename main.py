@@ -34,6 +34,7 @@ def main() -> None:
         map_height=map_height,
         engine=engine,
     )
+    engine.update_fov()
     
     # Part 10 refactoring: Track handler in main loop
     handler: game.input_handlers.BaseEventHandler = game.input_handlers.MainGameEventHandler(engine)
