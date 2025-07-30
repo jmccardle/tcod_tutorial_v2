@@ -3,6 +3,7 @@ import tcod
 
 from game.engine import Engine
 from game.entity import Entity
+from game.game_map import GameMap
 from game.input_handlers import BaseEventHandler, MainGameEventHandler
 
 
@@ -10,11 +11,25 @@ def main() -> None:
     screen_width = 80
     screen_height = 50
 
+    map_width = 80
+    map_height = 45
+
     tileset = tcod.tileset.load_tilesheet("data/dejavu10x10_gs_tc.png", 32, 8, tcod.tileset.CHARMAP_TCOD)
 
-    player = Entity(x=int(screen_width / 2), y=int(screen_height / 2), char="@", color=(255, 255, 255))
+    engine = Engine(player=Entity())
 
-    engine = Engine(player=player)
+    engine.game_map = GameMap(engine, map_width, map_height)
+
+    # Create player and place in map
+    engine.player.place(int(screen_width / 2), int(screen_height / 2), engine.game_map)
+    engine.player.char = "@"
+    engine.player.color = (255, 255, 255)
+
+    # Create an NPC
+    npc = Entity()
+    npc.place(int(screen_width / 2 - 5), int(screen_height / 2), engine.game_map)
+    npc.char = "@"
+    npc.color = (255, 255, 0)
 
     # Part 10 refactoring: Track handler in main loop
     handler: BaseEventHandler = MainGameEventHandler(engine)
@@ -32,8 +47,8 @@ def main() -> None:
             handler.on_render(console=root_console)
             context.present(root_console)
 
+            # Part 10 refactoring: Handler manages its own state transitions
             for event in tcod.event.wait():
-                event = context.convert_event(event)
                 handler = handler.handle_events(event)
 
 

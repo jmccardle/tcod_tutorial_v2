@@ -89,7 +89,7 @@ class EventHandler(BaseEventHandler):
         if action is None:
             return False
 
-        action.perform(self.engine)
+        action.perform()
         return True
 
     def on_render(self, console: tcod.console.Console) -> None:
