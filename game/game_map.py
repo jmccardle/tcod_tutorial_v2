@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, Set
 import numpy as np
 import tcod
 
-from game.tiles import floor, wall
+from game.tiles import wall
 
 if TYPE_CHECKING:
     import game.engine
@@ -17,10 +17,7 @@ class GameMap:
         self.engine = engine
         self.width, self.height = width, height
         self.entities: Set[game.entity.Entity] = set()
-        self.tiles = np.full((width, height), fill_value=floor, order="F")
-
-        # Create a simple test wall
-        self.tiles[30:33, 22] = wall
+        self.tiles = np.full((width, height), fill_value=wall, order="F")
 
     def get_blocking_entity_at_location(
         self,
