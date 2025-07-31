@@ -1,18 +1,81 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator, List, Tuple
+from typing import TYPE_CHECKING, Dict, Iterator, List, Tuple
 import copy
 import random
 
 import tcod
 
-from game.entity import Entity
-from game.entity_factories import confusion_scroll, fireball_scroll, health_potion, lightning_scroll, orc, troll
-from game.game_map import GameMap
-from game.tiles import floor
+import game.entity_factories
+import game.tiles
 
 if TYPE_CHECKING:
     import game.engine
+    import game.entity
+    import game.game_map
+
+
+max_items_by_floor = [
+    (1, 1),
+    (4, 2),
+]
+
+max_monsters_by_floor = [
+    (1, 2),
+    (4, 3),
+    (6, 5),
+]
+
+item_chances: Dict[int, List[Tuple[game.entity.Entity, int]]] = {
+    0: [(game.entity_factories.health_potion, 35)],
+    2: [(game.entity_factories.confusion_scroll, 10)],
+    4: [(game.entity_factories.lightning_scroll, 25)],
+    6: [(game.entity_factories.fireball_scroll, 25)],
+}
+
+enemy_chances: Dict[int, List[Tuple[game.entity.Entity, int]]] = {
+    0: [(game.entity_factories.orc, 80)],
+    3: [(game.entity_factories.troll, 15)],
+    5: [(game.entity_factories.troll, 30)],
+    7: [(game.entity_factories.troll, 60)],
+}
+
+
+def get_max_value_for_floor(weighted_chances_by_floor: List[Tuple[int, int]], floor: int) -> int:
+    current_value = 0
+
+    for floor_minimum, value in weighted_chances_by_floor:
+        if floor_minimum > floor:
+            break
+        else:
+            current_value = value
+
+    return current_value
+
+
+def get_entities_at_random(
+    weighted_chances_by_floor: Dict[int, List[Tuple[game.entity.Entity, int]]],
+    number_of_entities: int,
+    floor: int,
+) -> List[game.entity.Entity]:
+    entity_weighted_chances = {}
+
+    for key, values in weighted_chances_by_floor.items():
+        if key > floor:
+            break
+        else:
+            for value in values:
+                entity = value[0]
+                weighted_chance = value[1]
+
+                entity_weighted_chances[entity] = weighted_chance
+
+    entities = list(entity_weighted_chances.keys())
+    entity_weighted_chance_values = list(entity_weighted_chances.values())
+
+    chosen_entities = random.choices(entities, weights=entity_weighted_chance_values, k=number_of_entities)
+
+    return chosen_entities
 
 
 class RectangularRoom:
@@ -60,41 +123,21 @@ def tunnel_between(start: Tuple[int, int], end: Tuple[int, int]) -> Iterator[Tup
 def place_entities(
     room: RectangularRoom,
     dungeon: game.game_map.GameMap,
-    maximum_monsters: int,
-    maximum_items: int,
+    floor_number: int,
 ) -> None:
-    number_of_monsters = random.randint(0, maximum_monsters)
-    number_of_items = random.randint(0, maximum_items)
+    number_of_monsters = random.randint(0, get_max_value_for_floor(max_monsters_by_floor, floor_number))
+    number_of_items = random.randint(0, get_max_value_for_floor(max_items_by_floor, floor_number))
 
-    for _ in range(number_of_monsters):
+    monsters: List[game.entity.Entity] = get_entities_at_random(enemy_chances, number_of_monsters, floor_number)
+    items: List[game.entity.Entity] = get_entities_at_random(item_chances, number_of_items, floor_number)
+
+    for entity in monsters + items:
         x = random.randint(room.x1 + 1, room.x2 - 1)
         y = random.randint(room.y1 + 1, room.y2 - 1)
 
         if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
-            if random.random() < 0.8:
-                monster = copy.deepcopy(orc)
-            else:
-                monster = copy.deepcopy(troll)
-
-            monster.place(x, y, dungeon)
-
-    for _ in range(number_of_items):
-        x = random.randint(room.x1 + 1, room.x2 - 1)
-        y = random.randint(room.y1 + 1, room.y2 - 1)
-
-        if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
-            item_chance = random.random()
-
-            if item_chance < 0.7:
-                item = copy.deepcopy(health_potion)
-            elif item_chance < 0.8:
-                item = copy.deepcopy(fireball_scroll)
-            elif item_chance < 0.9:
-                item = copy.deepcopy(confusion_scroll)
-            else:
-                item = copy.deepcopy(lightning_scroll)
-
-            item.place(x, y, dungeon)
+            entity_copy = copy.deepcopy(entity)
+            entity_copy.place(x, y, dungeon)
 
 
 def generate_dungeon(
@@ -103,13 +146,12 @@ def generate_dungeon(
     room_max_size: int,
     map_width: int,
     map_height: int,
-    max_monsters_per_room: int,
-    max_items_per_room: int,
+    current_floor: int,
     engine: game.engine.Engine,
 ) -> game.game_map.GameMap:
     """Generate a new dungeon map."""
     player = engine.player
-    dungeon = GameMap(engine, map_width, map_height)
+    dungeon = game.game_map.GameMap(engine, map_width, map_height)
 
     rooms: List[RectangularRoom] = []
 
@@ -129,7 +171,7 @@ def generate_dungeon(
         # If there are no intersections then the room is valid.
 
         # Dig out this rooms inner area.
-        dungeon.tiles[new_room.inner] = floor
+        dungeon.tiles[new_room.inner] = game.tiles.floor
 
         if len(rooms) == 0:
             # The first room, where the player starts.
@@ -137,9 +179,9 @@ def generate_dungeon(
         else:  # All rooms after the first.
             # Dig out a tunnel between this room and the previous one.
             for x, y in tunnel_between(rooms[-1].center, new_room.center):
-                dungeon.tiles[x, y] = floor
+                dungeon.tiles[x, y] = game.tiles.floor
 
-        place_entities(new_room, dungeon, max_monsters_per_room, max_items_per_room)
+        place_entities(new_room, dungeon, current_floor)
 
         # Finally, append the new room to the list.
         rooms.append(new_room)
