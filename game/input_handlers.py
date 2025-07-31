@@ -65,6 +65,9 @@ class BaseEventHandler(tcod.event.EventDispatch[ActionOrHandler]):
 
     def ev_quit(self, event: tcod.event.Quit) -> Optional[game.actions.Action]:
         raise SystemExit()
+    
+    def ev_mousemotion(self, event: tcod.event.MouseMotion) -> None:
+        pass
 
 
 class EventHandler(BaseEventHandler):
@@ -100,6 +103,10 @@ class EventHandler(BaseEventHandler):
 
     def on_render(self, console: tcod.console.Console) -> None:
         self.engine.render(console)
+    
+    def ev_mousemotion(self, event: tcod.event.MouseMotion) -> None:
+        if self.engine.game_map.in_bounds(event.position.x, event.position.y):
+            self.engine.mouse_location = int(event.position.x), int(event.position.y)
 
 
 class MainGameEventHandler(EventHandler):
@@ -116,6 +123,8 @@ class MainGameEventHandler(EventHandler):
             action = game.actions.BumpAction(player, dx, dy)
         elif key == tcod.event.KeySym.ESCAPE:
             action = game.actions.EscapeAction(player)
+        elif key == tcod.event.KeySym.V:
+            return HistoryViewer(self.engine)
         elif key == tcod.event.KeySym.PERIOD and modifiers & (
             tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT
         ):
@@ -132,3 +141,48 @@ class GameOverEventHandler(EventHandler):
         if isinstance(action_or_state, BaseEventHandler):
             return action_or_state
         return self  # Keep this handler active
+
+
+class HistoryViewer(EventHandler):
+    """Print the history on a larger window which can be navigated."""
+
+    def __init__(self, engine: game.engine.Engine):
+        super().__init__(engine)
+        self.log_length = len(engine.message_log.messages)
+        self.cursor = self.log_length - 1
+
+    def on_render(self, console: tcod.console.Console) -> None:
+        super().on_render(console)  # Draw the main state as the background.
+
+        log_console = tcod.console.Console(console.width - 6, console.height - 6)
+
+        # Draw a frame with a custom banner title.
+        log_console.draw_frame(0, 0, log_console.width, log_console.height)
+        log_console.print_box(
+            0, 0, log_console.width, 1, "┤Message history├", alignment=tcod.CENTER
+        )
+
+        # Render the message log using the cursor parameter.
+        self.engine.message_log.render_messages(
+            log_console,
+            1,
+            1,
+            log_console.width - 2,
+            log_console.height - 2,
+            self.engine.message_log.messages[: self.cursor + 1],
+        )
+        log_console.blit(console, 3, 3)
+
+    def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[ActionOrHandler]:
+        # Fancy conditional movement to make it feel right.
+        if event.sym in (tcod.event.KeySym.UP, tcod.event.KeySym.K):
+            self.cursor = max(0, self.cursor - 1)
+        elif event.sym in (tcod.event.KeySym.DOWN, tcod.event.KeySym.J):
+            self.cursor = min(self.log_length - 1, self.cursor + 1)
+        elif event.sym == tcod.event.KeySym.HOME:
+            self.cursor = 0
+        elif event.sym == tcod.event.KeySym.END:
+            self.cursor = self.log_length - 1
+        else:  # Any other key moves back to the main game state.
+            return MainGameEventHandler(self.engine)
+        return None
