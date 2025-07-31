@@ -15,6 +15,7 @@ class Action:
     @property
     def engine(self) -> game.engine.Engine:
         """Return the engine this action belongs to."""
+        assert self.entity.gamemap is not None, "Entity must be placed on a gamemap"
         return self.entity.gamemap.engine
 
     def perform(self) -> None:
@@ -67,11 +68,22 @@ class ActionWithDirection(Action):
 
 class MeleeAction(ActionWithDirection):
     def perform(self) -> None:
-        target = self.blocking_entity
+        target = self.target_actor
         if not target:
             return  # No entity to attack.
 
-        print(f"You kick the {target.name}, much to its annoyance!")
+        # Type checking to ensure both entities are Actors with fighter components
+        assert isinstance(self.entity, game.entity.Actor), "Attacker must be an Actor"
+        assert isinstance(target, game.entity.Actor), "Target must be an Actor"
+
+        damage = self.entity.fighter.power - target.fighter.defense
+
+        attack_desc = f"{self.entity.name.capitalize()} attacks {target.name}"
+        if damage > 0:
+            print(f"{attack_desc} for {damage} hit points.")
+            target.fighter.hp -= damage
+        else:
+            print(f"{attack_desc} but does no damage.")
 
 
 class MovementAction(ActionWithDirection):
