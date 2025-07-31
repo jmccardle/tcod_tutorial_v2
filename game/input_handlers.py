@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, Union
+from typing import Callable, Optional, Tuple, TYPE_CHECKING, Union
 
+import numpy as np
 from tcod import libtcodpy
 import tcod.event
 
@@ -378,3 +379,51 @@ class LookHandler(SelectIndexHandler):
     def on_index_selected(self, x: int, y: int) -> MainGameEventHandler:
         """Return to main handler."""
         return MainGameEventHandler(self.engine)
+
+
+class SingleRangedAttackHandler(SelectIndexHandler):
+    """Handles targeting a single enemy. Only the enemy selected will be affected."""
+
+    def __init__(
+        self, engine: game.engine.Engine, callback: Callable[[Tuple[int, int]], Optional[game.actions.Action]]
+    ):
+        super().__init__(engine)
+
+        self.callback = callback
+
+    def on_index_selected(self, x: int, y: int) -> Optional[game.actions.Action]:
+        return self.callback((x, y))
+
+
+class AreaRangedAttackHandler(SelectIndexHandler):
+    """Handles targeting an area within a given radius. Any entity within the area will be affected."""
+
+    def __init__(
+        self,
+        engine: game.engine.Engine,
+        radius: int,
+        callback: Callable[[Tuple[int, int]], Optional[game.actions.Action]],
+    ):
+        super().__init__(engine)
+
+        self.radius = radius
+        self.callback = callback
+
+    def on_render(self, console: tcod.console.Console) -> None:
+        """Highlight the tile under the cursor."""
+        super().on_render(console)
+
+        x, y = self.engine.mouse_location
+
+        # Draw a rectangle around the targeted area, so the player can see the affected tiles.
+        console.draw_frame(
+            x=x - self.radius - 1,
+            y=y - self.radius - 1,
+            width=self.radius ** 2,
+            height=self.radius ** 2,
+            fg=game.color.red,
+            clear=False,
+        )
+
+    def on_index_selected(self, x: int, y: int) -> Optional[game.actions.Action]:
+        return self.callback((x, y))
