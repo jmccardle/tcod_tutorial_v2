@@ -21,11 +21,15 @@ class Entity:
         y: int = 0,
         char: str = "?",
         color: Tuple[int, int, int] = (255, 255, 255),
+        name: str = "<Unnamed>",
+        blocks_movement: bool = False,
     ):
         self.x = x
         self.y = y
         self.char = char
         self.color = color
+        self.name = name
+        self.blocks_movement = blocks_movement
         if gamemap:
             # If gamemap isn't provided now then it will be set later.
             self.gamemap = gamemap

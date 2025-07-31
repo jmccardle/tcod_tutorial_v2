@@ -18,10 +18,11 @@ def main() -> None:
     room_max_size = 10
     room_min_size = 6
     max_rooms = 30
+    max_monsters_per_room = 2
 
     tileset = tcod.tileset.load_tilesheet("data/dejavu10x10_gs_tc.png", 32, 8, tcod.tileset.CHARMAP_TCOD)
 
-    player = Entity(x=0, y=0, char="@", color=(255, 255, 255))
+    player = Entity(x=0, y=0, char="@", color=(255, 255, 255), name="Player", blocks_movement=True)
     engine = Engine(player=player)
 
     engine.game_map = generate_dungeon(
@@ -30,6 +31,7 @@ def main() -> None:
         room_max_size=room_max_size,
         map_width=map_width,
         map_height=map_height,
+        max_monsters_per_room=max_monsters_per_room,
         engine=engine,
     )
     engine.update_fov()

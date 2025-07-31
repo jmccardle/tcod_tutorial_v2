@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import tcod.event
 
-from game.actions import Action, EscapeAction, MovementAction
+from game.actions import Action, BumpAction, EscapeAction, WaitAction
 
 if TYPE_CHECKING:
     import game.engine
@@ -91,6 +91,7 @@ class EventHandler(BaseEventHandler):
 
         action.perform()
 
+        self.engine.handle_enemy_turns()
         self.engine.update_fov()  # Update the FOV before the players next action.
         return True
 
@@ -103,15 +104,18 @@ class MainGameEventHandler(EventHandler):
         action: Optional[Action] = None
 
         key = event.sym
+        modifiers = event.mod
 
         player = self.engine.player
 
         if key in MOVE_KEYS:
             dx, dy = MOVE_KEYS[key]
-            action = MovementAction(player, dx, dy)
-
+            action = BumpAction(player, dx, dy)
         elif key == tcod.event.KeySym.ESCAPE:
             action = EscapeAction(player)
+        elif key == tcod.event.KeySym.PERIOD and modifiers & (tcod.event.Modifier.LSHIFT | tcod.event.Modifier.RSHIFT):
+            # Wait if user presses '>' (shift + period)
+            action = WaitAction(player)
 
         # No valid key was pressed
         return action
