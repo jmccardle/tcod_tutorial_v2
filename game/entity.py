@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     import game.components.consumable
     import game.components.fighter
     import game.components.inventory
+    import game.components.level
     import game.game_map
 
 
@@ -79,6 +80,7 @@ class Actor(Entity):
         ai_cls: Type[game.components.ai.BaseAI],
         fighter: game.components.fighter.Fighter,
         inventory: game.components.inventory.Inventory,
+        level: game.components.level.Level,
     ):
         super().__init__(
             parent=None,
@@ -97,6 +99,9 @@ class Actor(Entity):
         
         self.inventory = inventory
         self.inventory.parent = self
+        
+        self.level = level
+        self.level.parent = self
         
         self.render_order = game.render_order.RenderOrder.ACTOR
 

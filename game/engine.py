@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 class Engine:
     game_map: game.game_map.GameMap
+    game_world: game.game_map.GameWorld
     
     def __init__(self, player: game.entity.Entity):
         self.player = player
@@ -49,6 +50,18 @@ class Engine:
             current_value=self.player.fighter.hp,
             maximum_value=self.player.fighter.max_hp,
             total_width=20,
+        )
+        
+        game.render_functions.render_dungeon_level(
+            console=console,
+            dungeon_level=self.game_world.current_floor,
+            location=(0, 47),
+        )
+        
+        console.print(
+            x=0,
+            y=46,
+            string=f"LVL: {self.player.level.current_level}",
         )
         
         game.render_functions.render_names_at_mouse_location(console=console, x=21, y=44, engine=self)
