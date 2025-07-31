@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import game.color
 import game.components.base_component
 import game.input_handlers
 import game.render_order
@@ -32,10 +33,12 @@ class Fighter(game.components.base_component.BaseComponent):
     def die(self) -> None:
         if self.engine.player is self.parent:
             death_message = "You died!"
+            death_message_color = game.color.player_die
             # Part 10 refactoring: Don't set event_handler here
             # GameOverEventHandler will be returned in handle_action
         else:
             death_message = f"{self.parent.name} is dead!"
+            death_message_color = game.color.enemy_die
 
         self.parent.char = "%"
         self.parent.color = (191, 0, 0)
@@ -44,4 +47,4 @@ class Fighter(game.components.base_component.BaseComponent):
         self.parent.name = f"remains of {self.parent.name}"
         self.parent.render_order = game.render_order.RenderOrder.CORPSE
 
-        print(death_message)
+        self.engine.message_log.add_message(death_message, death_message_color)
