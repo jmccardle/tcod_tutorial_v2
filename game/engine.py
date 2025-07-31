@@ -6,10 +6,10 @@ import pickle
 
 import tcod
 
-from game.color import welcome_text
-from game.entity import Actor
-from game.message_log import MessageLog
-from game.render_functions import render_bar, render_names_at_mouse_location
+import game.color
+import game.entity
+import game.message_log
+import game.render_functions
 
 if TYPE_CHECKING:
     import game.game_map
@@ -17,11 +17,12 @@ if TYPE_CHECKING:
 
 class Engine:
     game_map: game.game_map.GameMap
+    game_world: game.game_map.GameWorld
 
-    def __init__(self, player: Actor):
+    def __init__(self, player: game.entity.Actor):
         self.player = player
         self.mouse_location = (0, 0)
-        self.message_log = MessageLog()
+        self.message_log = game.message_log.MessageLog()
 
     def update_fov(self) -> None:
         """Recompute the visible area based on the players point of view."""
@@ -45,14 +46,26 @@ class Engine:
 
         self.message_log.render(console=console, x=21, y=45, width=40, height=5)
 
-        render_bar(
+        game.render_functions.render_bar(
             console=console,
             current_value=self.player.fighter.hp,
             maximum_value=self.player.fighter.max_hp,
             total_width=20,
         )
 
-        render_names_at_mouse_location(console=console, x=21, y=44, engine=self)
+        game.render_functions.render_dungeon_level(
+            console=console,
+            dungeon_level=self.game_world.current_floor,
+            location=(0, 47),
+        )
+
+        console.print(
+            x=0,
+            y=46,
+            string=f"LVL: {self.player.level.current_level}",
+        )
+
+        game.render_functions.render_names_at_mouse_location(console=console, x=21, y=44, engine=self)
 
     def save_as(self, filename: str) -> None:
         """Save this Engine instance as a compressed file."""

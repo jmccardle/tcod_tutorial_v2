@@ -144,4 +144,7 @@ def generate_dungeon(
         # Finally, append the new room to the list.
         rooms.append(new_room)
 
+    # Add stairs going down
+    dungeon.downstairs_location = rooms[-1].center
+
     return dungeon

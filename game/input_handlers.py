@@ -5,17 +5,17 @@ from typing import TYPE_CHECKING, Callable, Optional, Tuple, Union
 from tcod import libtcodpy
 import tcod.event
 
-from game.actions import Action, BumpAction, DropItem, EscapeAction, PickupAction, WaitAction
-from game.color import black, impossible, invalid, red, white
-from game.entity import Actor
-from game.exceptions import Impossible
+import game.actions
+import game.color
+import game.entity
+import game.exceptions
 
 if TYPE_CHECKING:
     import game.engine
     import game.entity
 
 # Part 10 refactoring: ActionOrHandler type
-ActionOrHandler = Union[Action, "BaseEventHandler"]
+ActionOrHandler = Union[game.actions.Action, "BaseEventHandler"]
 """An event handler return value which can trigger an action or switch active handlers.
 
 If a handler is returned then it will become the active handler for future events.
@@ -62,13 +62,13 @@ class BaseEventHandler(tcod.event.EventDispatch[ActionOrHandler]):
         state = self.dispatch(event)
         if isinstance(state, BaseEventHandler):
             return state
-        assert not isinstance(state, Action), f"{self!r} can not handle actions."
+        assert not isinstance(state, game.actions.Action), f"{self!r} can not handle actions."
         return self
 
     def on_render(self, console: tcod.console.Console) -> None:
         raise NotImplementedError()
 
-    def ev_quit(self, event: tcod.event.Quit) -> Optional[Action]:
+    def ev_quit(self, event: tcod.event.Quit) -> Optional[game.actions.Action]:
         raise SystemExit()
 
     def ev_mousemotion(self, event: tcod.event.MouseMotion) -> None:
@@ -87,14 +87,16 @@ class EventHandler(BaseEventHandler):
         if self.handle_action(action_or_state):
             # A valid action was performed.
             # Type check to ensure player is an Actor before accessing is_alive
-            assert isinstance(self.engine.player, Actor), "Player must be an Actor"
+            assert isinstance(self.engine.player, game.entity.Actor), "Player must be an Actor"
             if not self.engine.player.is_alive:
                 # The player was killed sometime during or after the action.
                 return GameOverEventHandler(self.engine)
+            elif self.engine.player.level.requires_level_up:
+                return LevelUpEventHandler(self.engine)
             return MainGameEventHandler(self.engine)  # Return to the main handler.
         return self
 
-    def handle_action(self, action: Optional[Action]) -> bool:
+    def handle_action(self, action: Optional[game.actions.Action]) -> bool:
         """Handle actions returned from event methods.
 
         Returns True if the action will advance a turn.
@@ -104,8 +106,8 @@ class EventHandler(BaseEventHandler):
 
         try:
             action.perform()
-        except Impossible as exc:
-            self.engine.message_log.add_message(exc.args[0], impossible)
+        except game.exceptions.Impossible as exc:
+            self.engine.message_log.add_message(exc.args[0], game.color.impossible)
             return False  # Skip enemy turn on exceptions.
 
         self.engine.handle_enemy_turns()
@@ -122,7 +124,7 @@ class EventHandler(BaseEventHandler):
 
 class MainGameEventHandler(EventHandler):
     def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[ActionOrHandler]:
-        action: Optional[Action] = None
+        action: Optional[game.actions.Action] = None
 
         key = event.sym
         modifiers = event.mod
@@ -131,22 +133,26 @@ class MainGameEventHandler(EventHandler):
 
         if key in MOVE_KEYS:
             dx, dy = MOVE_KEYS[key]
-            action = BumpAction(player, dx, dy)
+            action = game.actions.BumpAction(player, dx, dy)
         elif key == tcod.event.KeySym.ESCAPE:
-            action = EscapeAction(player)
+            action = game.actions.EscapeAction(player)
         elif key == tcod.event.KeySym.V:
             return HistoryViewer(self.engine)
         elif key == tcod.event.KeySym.G:
-            action = PickupAction(player)
+            action = game.actions.PickupAction(player)
         elif key == tcod.event.KeySym.I:
             return InventoryActivateHandler(self.engine)
         elif key == tcod.event.KeySym.D:
             return InventoryDropHandler(self.engine)
         elif key == tcod.event.KeySym.SLASH:
             return LookHandler(self.engine)
-        elif key == tcod.event.KeySym.PERIOD and modifiers & (tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT):
-            # Wait if user presses '>' (shift + period)
-            action = WaitAction(player)
+        elif key == tcod.event.KeySym.PERIOD:
+            if modifiers & (tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT):
+                # Take stairs down if user presses '>'
+                return game.actions.TakeStairsAction(player)
+            else:
+                # Wait if user presses '.'
+                action = game.actions.WaitAction(player)
 
         # No valid key was pressed
         return action
@@ -288,7 +294,7 @@ class InventoryEventHandler(AskUserEventHandler):
             try:
                 selected_item = player.inventory.items[index]
             except IndexError:
-                self.engine.message_log.add_message("Invalid entry.", invalid)
+                self.engine.message_log.add_message("Invalid entry.", game.color.invalid)
                 return None
             return self.on_item_selected(selected_item)
         return super().ev_keydown(event)
@@ -308,7 +314,7 @@ class InventoryActivateHandler(InventoryEventHandler):
         if item.consumable is not None:
             return item.consumable.get_action(self.engine.player)
         else:
-            self.engine.message_log.add_message("This item cannot be used.", invalid)
+            self.engine.message_log.add_message("This item cannot be used.", game.color.invalid)
             return None
 
 
@@ -319,7 +325,7 @@ class InventoryDropHandler(InventoryEventHandler):
 
     def on_item_selected(self, item: game.entity.Item) -> Optional[ActionOrHandler]:
         """Drop this item."""
-        return DropItem(self.engine.player, item)
+        return game.actions.DropItem(self.engine.player, item)
 
 
 class SelectIndexHandler(AskUserEventHandler):
@@ -335,8 +341,8 @@ class SelectIndexHandler(AskUserEventHandler):
         """Highlight the tile under the cursor."""
         super().on_render(console)
         x, y = self.engine.mouse_location
-        console.rgb["bg"][x, y] = white
-        console.rgb["fg"][x, y] = black
+        console.rgb["bg"][x, y] = game.color.white
+        console.rgb["fg"][x, y] = game.color.black
 
     def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[ActionOrHandler]:
         """Check for key movement or confirmation keys."""
@@ -424,7 +430,7 @@ class AreaRangedAttackHandler(SelectIndexHandler):
             y=y - self.radius - 1,
             width=self.radius**2,
             height=self.radius**2,
-            fg=red,
+            fg=game.color.red,
             clear=False,
         )
 
@@ -457,3 +463,70 @@ class PopupMessage(BaseEventHandler):
     def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[BaseEventHandler]:
         """Any key returns to the parent handler."""
         return self.parent
+
+
+class LevelUpEventHandler(AskUserEventHandler):
+    TITLE = "Level Up"
+
+    def on_render(self, console: tcod.console.Console) -> None:
+        super().on_render(console)
+
+        if self.engine.player.x <= 30:
+            x = 40
+        else:
+            x = 0
+
+        console.draw_frame(
+            x=x,
+            y=0,
+            width=35,
+            height=8,
+            title=self.TITLE,
+            clear=True,
+            fg=(255, 255, 255),
+            bg=(0, 0, 0),
+        )
+
+        console.print(x=x + 1, y=1, string="Congratulations! You level up!")
+        console.print(x=x + 1, y=2, string="Select an attribute to increase.")
+
+        console.print(
+            x=x + 1,
+            y=4,
+            string=f"a) Constitution (+20 HP, from {self.engine.player.fighter.max_hp})",
+        )
+        console.print(
+            x=x + 1,
+            y=5,
+            string=f"b) Strength (+1 attack, from {self.engine.player.fighter.power})",
+        )
+        console.print(
+            x=x + 1,
+            y=6,
+            string=f"c) Agility (+1 defense, from {self.engine.player.fighter.defense})",
+        )
+
+    def ev_keydown(self, event: tcod.event.KeyDown) -> Optional[ActionOrHandler]:
+        player = self.engine.player
+        key = event.sym
+        index = key - tcod.event.KeySym.A
+
+        if 0 <= index <= 2:
+            if index == 0:
+                player.level.increase_max_hp()
+            elif index == 1:
+                player.level.increase_power()
+            else:
+                player.level.increase_defense()
+        else:
+            self.engine.message_log.add_message("Invalid entry.", game.color.invalid)
+
+            return None
+
+        return super().ev_keydown(event)
+
+    def ev_mousebuttondown(self, event: tcod.event.MouseButtonDown) -> Optional[ActionOrHandler]:
+        """
+        Don't allow the player to click to exit the menu, like normal.
+        """
+        return None
