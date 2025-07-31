@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 import game.actions
 import game.color
@@ -16,7 +16,9 @@ if TYPE_CHECKING:
 class Consumable(game.components.base_component.BaseComponent):
     parent: game.entity.Item
 
-    def get_action(self, consumer: game.entity.Actor) -> Optional[game.actions.Action]:
+    def get_action(
+        self, consumer: game.entity.Actor
+    ) -> Optional[Union[game.actions.Action, game.input_handlers.BaseEventHandler]]:
         """Try to return the action for this item."""
         return game.actions.ItemAction(consumer, self.parent)
 
