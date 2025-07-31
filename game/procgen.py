@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import copy
 import random
 from typing import Iterator, List, Tuple, TYPE_CHECKING
 
 import tcod
 
-import game.entity
+import game.entity_factories
 import game.tiles
 
 if TYPE_CHECKING:
     import game.engine
+    import game.entity
     import game.game_map
 
 
@@ -68,25 +70,11 @@ def place_entities(
 
         if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
             if random.random() < 0.8:
-                game.entity.Entity(
-                    gamemap=dungeon,
-                    x=x,
-                    y=y,
-                    char="o",
-                    color=(63, 127, 63),
-                    name="Orc",
-                    blocks_movement=True
-                )
+                monster = copy.deepcopy(game.entity_factories.orc)
             else:
-                game.entity.Entity(
-                    gamemap=dungeon,
-                    x=x,
-                    y=y,
-                    char="T",
-                    color=(0, 127, 0),
-                    name="Troll",
-                    blocks_movement=True
-                )
+                monster = copy.deepcopy(game.entity_factories.troll)
+            
+            monster.place(x, y, dungeon)
 
 
 def generate_dungeon(

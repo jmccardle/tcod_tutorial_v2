@@ -78,6 +78,9 @@ class EventHandler(BaseEventHandler):
             return action_or_state
         if self.handle_action(action_or_state):
             # A valid action was performed.
+            if not self.engine.player.is_alive:
+                # The player was killed sometime during or after the action.
+                return GameOverEventHandler(self.engine)
             return MainGameEventHandler(self.engine)  # Return to the main handler.
         return self
     
@@ -121,3 +124,11 @@ class MainGameEventHandler(EventHandler):
 
         # No valid key was pressed
         return action
+
+
+class GameOverEventHandler(EventHandler):
+    def handle_events(self, event: tcod.event.Event) -> BaseEventHandler:
+        action_or_state = self.dispatch(event)
+        if isinstance(action_or_state, BaseEventHandler):
+            return action_or_state
+        return self  # Keep this handler active
