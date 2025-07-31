@@ -91,6 +91,7 @@ class EventHandler(BaseEventHandler):
         
         action.perform()
         
+        self.engine.handle_enemy_turns()
         self.engine.update_fov()  # Update the FOV before the players next action.
         return True
 
@@ -103,15 +104,20 @@ class MainGameEventHandler(EventHandler):
         action: Optional[game.actions.Action] = None
 
         key = event.sym
+        modifiers = event.mod
 
         player = self.engine.player
 
         if key in MOVE_KEYS:
             dx, dy = MOVE_KEYS[key]
-            action = game.actions.MovementAction(player, dx, dy)
-
+            action = game.actions.BumpAction(player, dx, dy)
         elif key == tcod.event.KeySym.ESCAPE:
             action = game.actions.EscapeAction(player)
+        elif key == tcod.event.KeySym.PERIOD and modifiers & (
+            tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT
+        ):
+            # Wait if user presses '>' (shift + period)
+            action = game.actions.WaitAction(player)
 
         # No valid key was pressed
         return action
