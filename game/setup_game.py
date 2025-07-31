@@ -40,6 +40,18 @@ def new_game() -> game.engine.Engine:
 
     engine = game.engine.Engine(player=player)
 
+    dagger = copy.deepcopy(game.entity_factories.dagger)
+    leather_armor = copy.deepcopy(game.entity_factories.leather_armor)
+
+    dagger.parent = player.inventory
+    leather_armor.parent = player.inventory
+
+    player.inventory.items.append(dagger)
+    player.equipment.toggle_equip(dagger, add_message=False)
+
+    player.inventory.items.append(leather_armor)
+    player.equipment.toggle_equip(leather_armor, add_message=False)
+
     engine.game_world = game.game_map.GameWorld(
         engine=engine,
         max_rooms=max_rooms,
