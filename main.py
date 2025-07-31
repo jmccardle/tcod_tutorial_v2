@@ -41,7 +41,6 @@ def main() -> None:
     )
     engine.update_fov()
 
-    # Part 10 refactoring: Track handler in main loop
     handler: BaseEventHandler = MainGameEventHandler(engine)
 
     with tcod.context.new(
@@ -57,11 +56,8 @@ def main() -> None:
             handler.on_render(console=root_console)
             context.present(root_console)
 
-            # Part 10 refactoring: Handler manages its own state transitions
             for event in tcod.event.wait():
-                # libtcodpy deprecation: convert mouse events
-                if isinstance(event, tcod.event.MouseMotion):
-                    event = context.convert_event(event)
+                event = context.convert_event(event)
                 handler = handler.handle_events(event)
 
 
