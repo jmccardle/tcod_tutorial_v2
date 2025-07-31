@@ -59,6 +59,12 @@ class Entity:
         # Move the entity by a given amount
         self.x += dx
         self.y += dy
+    
+    def distance(self, x: int, y: int) -> float:
+        """
+        Return the distance between the current entity and the given (x, y) coordinate.
+        """
+        return float(((x - self.x) ** 2 + (y - self.y) ** 2) ** 0.5)
 
 
 class Actor(Entity):
