@@ -179,3 +179,13 @@ class TakeStairsAction(Action):
             )
         else:
             raise game.exceptions.Impossible("There are no stairs here.")
+
+
+class EquipAction(Action):
+    def __init__(self, entity: game.entity.Actor, item: game.entity.Item):
+        super().__init__(entity)
+        
+        self.item = item
+
+    def perform(self) -> None:
+        self.entity.equipment.toggle_equip(self.item)

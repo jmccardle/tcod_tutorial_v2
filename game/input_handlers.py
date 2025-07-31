@@ -142,6 +142,8 @@ class MainGameEventHandler(EventHandler):
             return InventoryActivateHandler(self.engine)
         elif key == tcod.event.KeySym.D:
             return InventoryDropHandler(self.engine)
+        elif key == tcod.event.KeySym.C:
+            return CharacterScreenEventHandler(self.engine)
         elif key == tcod.event.KeySym.SLASH:
             return LookHandler(self.engine)
         elif key == tcod.event.KeySym.PERIOD:
@@ -237,6 +239,52 @@ class AskUserEventHandler(EventHandler):
         return MainGameEventHandler(self.engine)
 
 
+class CharacterScreenEventHandler(AskUserEventHandler):
+    TITLE = "Character Information"
+
+    def on_render(self, console: tcod.console.Console) -> None:
+        super().on_render(console)
+
+        if self.engine.player.x <= 30:
+            x = 40
+        else:
+            x = 0
+
+        y = 0
+
+        width = len(self.TITLE) + 4
+
+        console.draw_frame(
+            x=x,
+            y=y,
+            width=width,
+            height=7,
+            title=self.TITLE,
+            clear=True,
+            fg=(255, 255, 255),
+            bg=(0, 0, 0),
+        )
+
+        console.print(
+            x=x + 1, y=y + 1, string=f"Level: {self.engine.player.level.current_level}"
+        )
+        console.print(
+            x=x + 1, y=y + 2, string=f"XP: {self.engine.player.level.current_xp}"
+        )
+        console.print(
+            x=x + 1,
+            y=y + 3,
+            string=f"XP for next Level: {self.engine.player.level.experience_to_next_level}",
+        )
+
+        console.print(
+            x=x + 1, y=y + 4, string=f"Attack: {self.engine.player.fighter.power}"
+        )
+        console.print(
+            x=x + 1, y=y + 5, string=f"Defense: {self.engine.player.fighter.defense}"
+        )
+
+
 class InventoryEventHandler(AskUserEventHandler):
     """This handler lets the user select an item.
 
@@ -281,7 +329,15 @@ class InventoryEventHandler(AskUserEventHandler):
         if number_of_items_in_inventory > 0:
             for i, item in enumerate(self.engine.player.inventory.items):
                 item_key = chr(ord("a") + i)
-                console.print(x + 1, y + i + 1, f"({item_key}) {item.name}")
+                
+                is_equipped = self.engine.player.equipment.item_is_equipped(item)
+                
+                item_string = f"({item_key}) {item.name}"
+                
+                if is_equipped:
+                    item_string = f"{item_string} (E)"
+                
+                console.print(x + 1, y + i + 1, item_string)
         else:
             console.print(x + 1, y + 1, "(Empty)")
 
@@ -311,7 +367,13 @@ class InventoryActivateHandler(InventoryEventHandler):
 
     def on_item_selected(self, item: game.entity.Item) -> Optional[ActionOrHandler]:
         """Return the action for the selected item."""
-        return item.consumable.get_action(self.engine.player)
+        if item.consumable:
+            # Try to return the action for this item.
+            return item.consumable.get_action(self.engine.player)
+        elif item.equippable:
+            return game.actions.EquipAction(self.engine.player, item)
+        else:
+            return None
 
 
 class InventoryDropHandler(InventoryEventHandler):
