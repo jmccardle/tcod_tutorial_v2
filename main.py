@@ -57,6 +57,9 @@ def main() -> None:
 
             # Part 10 refactoring: Handler manages its own state transitions
             for event in tcod.event.wait():
+                # libtcodpy deprecation: convert mouse events
+                if isinstance(event, tcod.event.MouseMotion):
+                    event = context.convert_event(event)
                 handler = handler.handle_events(event)
 
 

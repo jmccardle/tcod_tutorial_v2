@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+from game.color import enemy_atk, player_atk
+from game.entity import Actor
+
 if TYPE_CHECKING:
     import game.engine
     import game.entity
@@ -73,17 +76,22 @@ class MeleeAction(ActionWithDirection):
             return  # No entity to attack.
 
         # Type checking to ensure both entities are Actors with fighter components
-        assert isinstance(self.entity, game.entity.Actor), "Attacker must be an Actor"
-        assert isinstance(target, game.entity.Actor), "Target must be an Actor"
+        assert isinstance(self.entity, Actor), "Attacker must be an Actor"
+        assert isinstance(target, Actor), "Target must be an Actor"
 
         damage = self.entity.fighter.power - target.fighter.defense
 
         attack_desc = f"{self.entity.name.capitalize()} attacks {target.name}"
+        if self.entity is self.engine.player:
+            attack_color = player_atk
+        else:
+            attack_color = enemy_atk
+
         if damage > 0:
-            print(f"{attack_desc} for {damage} hit points.")
+            self.engine.message_log.add_message(f"{attack_desc} for {damage} hit points.", attack_color)
             target.fighter.hp -= damage
         else:
-            print(f"{attack_desc} but does no damage.")
+            self.engine.message_log.add_message(f"{attack_desc} but does no damage.", attack_color)
 
 
 class MovementAction(ActionWithDirection):

@@ -4,7 +4,10 @@ from typing import TYPE_CHECKING
 
 import tcod
 
+from game.color import welcome_text
 from game.entity import Actor
+from game.message_log import MessageLog
+from game.render_functions import render_bar, render_names_at_mouse_location
 
 if TYPE_CHECKING:
     import game.game_map
@@ -13,8 +16,11 @@ if TYPE_CHECKING:
 class Engine:
     game_map: game.game_map.GameMap
 
-    def __init__(self, player: game.entity.Actor):
+    def __init__(self, player: Actor):
         self.player = player
+        self.mouse_location = (0, 0)
+        self.message_log = MessageLog()
+        self.message_log.add_message("Hello and welcome, adventurer, to yet another dungeon!", welcome_text)
 
     def update_fov(self) -> None:
         """Recompute the visible area based on the players point of view."""
@@ -27,9 +33,22 @@ class Engine:
         self.game_map.explored |= self.game_map.visible
 
     def handle_enemy_turns(self) -> None:
-        for entity in set(self.game_map.actors) - {self.player}:
+        for entity in self.game_map.actors:
+            if entity is self.player:
+                continue
             if entity.ai:
                 entity.ai.perform()
 
     def render(self, console: tcod.console.Console) -> None:
         self.game_map.render(console)
+
+        self.message_log.render(console=console, x=21, y=45, width=40, height=5)
+
+        render_bar(
+            console=console,
+            current_value=self.player.fighter.hp,
+            maximum_value=self.player.fighter.max_hp,
+            total_width=20,
+        )
+
+        render_names_at_mouse_location(console=console, x=21, y=44, engine=self)

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Iterator, Optional, Set
 import numpy as np
 import tcod
 
+from game.entity import Actor
 from game.tiles import SHROUD, wall
 
 if TYPE_CHECKING:
@@ -30,7 +31,7 @@ class GameMap:
     @property
     def actors(self) -> Iterator[game.entity.Actor]:
         """Iterate over this maps living actors."""
-        yield from (entity for entity in self.entities if isinstance(entity, game.entity.Actor) and entity.is_alive)
+        yield from (entity for entity in self.entities if isinstance(entity, Actor) and entity.is_alive)
 
     def get_blocking_entity_at_location(
         self,
