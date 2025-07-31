@@ -7,7 +7,7 @@ import random
 import tcod
 
 from game.entity import Entity
-from game.entity_factories import health_potion, orc, troll
+from game.entity_factories import confusion_scroll, fireball_scroll, health_potion, lightning_scroll, orc, troll
 from game.game_map import GameMap
 from game.tiles import floor
 
@@ -83,7 +83,16 @@ def place_entities(
         y = random.randint(room.y1 + 1, room.y2 - 1)
 
         if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
-            item = copy.deepcopy(health_potion)
+            item_chance = random.random()
+
+            if item_chance < 0.7:
+                item = copy.deepcopy(health_potion)
+            elif item_chance < 0.8:
+                item = copy.deepcopy(fireball_scroll)
+            elif item_chance < 0.9:
+                item = copy.deepcopy(confusion_scroll)
+            else:
+                item = copy.deepcopy(lightning_scroll)
 
             item.place(x, y, dungeon)
 
