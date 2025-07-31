@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+import copy
+
 import tcod
 
 from game.engine import Engine
 from game.entity import Entity
 from game.input_handlers import BaseEventHandler, MainGameEventHandler
 from game.procgen import generate_dungeon
-import game.game_map
+import game.entity_factories
 
 
 def main() -> None:
@@ -22,7 +24,8 @@ def main() -> None:
 
     tileset = tcod.tileset.load_tilesheet("data/dejavu10x10_gs_tc.png", 32, 8, tcod.tileset.CHARMAP_TCOD)
 
-    player = Entity(x=0, y=0, char="@", color=(255, 255, 255), name="Player", blocks_movement=True)
+    player = copy.deepcopy(game.entity_factories.player)
+
     engine = Engine(player=player)
 
     engine.game_map = generate_dungeon(

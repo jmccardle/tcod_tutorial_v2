@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Optional, Union
 import tcod.event
 
 from game.actions import Action, BumpAction, EscapeAction, WaitAction
+from game.entity import Actor
 
 if TYPE_CHECKING:
     import game.engine
@@ -78,6 +79,11 @@ class EventHandler(BaseEventHandler):
             return action_or_state
         if self.handle_action(action_or_state):
             # A valid action was performed.
+            # Type check to ensure player is an Actor before accessing is_alive
+            assert isinstance(self.engine.player, Actor), "Player must be an Actor"
+            if not self.engine.player.is_alive:
+                # The player was killed sometime during or after the action.
+                return GameOverEventHandler(self.engine)
             return MainGameEventHandler(self.engine)  # Return to the main handler.
         return self
 
@@ -112,10 +118,18 @@ class MainGameEventHandler(EventHandler):
             dx, dy = MOVE_KEYS[key]
             action = BumpAction(player, dx, dy)
         elif key == tcod.event.KeySym.ESCAPE:
-            action = EscapeAction(player)
-        elif key == tcod.event.KeySym.PERIOD and modifiers & (tcod.event.Modifier.LSHIFT | tcod.event.Modifier.RSHIFT):
+            action = game.actions.EscapeAction(player)
+        elif key == tcod.event.KeySym.PERIOD and modifiers & (tcod.event.KMOD_LSHIFT | tcod.event.KMOD_RSHIFT):
             # Wait if user presses '>' (shift + period)
             action = WaitAction(player)
 
         # No valid key was pressed
         return action
+
+
+class GameOverEventHandler(EventHandler):
+    def handle_events(self, event: tcod.event.Event) -> BaseEventHandler:
+        action_or_state = self.dispatch(event)
+        if isinstance(action_or_state, BaseEventHandler):
+            return action_or_state
+        return self  # Keep this handler active

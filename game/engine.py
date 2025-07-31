@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import tcod
 
-from game.entity import Entity
+from game.entity import Actor
 
 if TYPE_CHECKING:
     import game.game_map
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class Engine:
     game_map: game.game_map.GameMap
 
-    def __init__(self, player: Entity):
+    def __init__(self, player: game.entity.Actor):
         self.player = player
 
     def update_fov(self) -> None:
@@ -27,8 +27,9 @@ class Engine:
         self.game_map.explored |= self.game_map.visible
 
     def handle_enemy_turns(self) -> None:
-        for entity in set(self.game_map.entities) - {self.player}:
-            print(f"The {entity.name} wonders when it will get to take a real turn.")
+        for entity in set(self.game_map.actors) - {self.player}:
+            if entity.ai:
+                entity.ai.perform()
 
     def render(self, console: tcod.console.Console) -> None:
         self.game_map.render(console)
