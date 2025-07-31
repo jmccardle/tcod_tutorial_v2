@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Set, TYPE_CHECKING
+from typing import Iterable, Iterator, Optional, Set, TYPE_CHECKING
 
 import numpy as np
 import tcod
@@ -21,6 +21,20 @@ class GameMap:
         
         self.visible = np.full((width, height), fill_value=False, order="F")  # Tiles the player can currently see
         self.explored = np.full((width, height), fill_value=False, order="F")  # Tiles the player has seen before
+    
+    @property
+    def gamemap(self) -> GameMap:
+        """Part 8 refactoring prep: self reference for parent system"""
+        return self
+    
+    @property
+    def actors(self) -> Iterator[game.entity.Actor]:
+        """Iterate over this maps living actors."""
+        yield from (
+            entity
+            for entity in self.entities
+            if isinstance(entity, game.entity.Actor) and entity.is_alive
+        )
 
     def get_blocking_entity_at_location(
         self,
@@ -59,7 +73,11 @@ class GameMap:
             default=game.tiles.SHROUD,
         )
         
-        for entity in self.entities:
+        entities_sorted_for_rendering = sorted(
+            self.entities, key=lambda x: x.render_order.value
+        )
+        
+        for entity in entities_sorted_for_rendering:
             # Only print entities that are in the FOV
             if self.visible[entity.x, entity.y]:
                 console.print(x=entity.x, y=entity.y, string=entity.char, fg=entity.color)
