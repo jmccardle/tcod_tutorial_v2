@@ -26,5 +26,9 @@ class Engine:
         # If a tile is "visible" it should be added to "explored".
         self.game_map.explored |= self.game_map.visible
 
+    def handle_enemy_turns(self) -> None:
+        for entity in set(self.game_map.entities) - {self.player}:
+            print(f'The {entity.name} wonders when it will get to take a real turn.')
+    
     def render(self, console: tcod.console.Console) -> None:
         self.game_map.render(console)

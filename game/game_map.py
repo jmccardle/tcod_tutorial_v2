@@ -28,10 +28,18 @@ class GameMap:
         location_y: int,
     ) -> Optional[game.entity.Entity]:
         for entity in self.entities:
-            if entity.x == location_x and entity.y == location_y:
+            if (
+                entity.blocks_movement
+                and entity.x == location_x
+                and entity.y == location_y
+            ):
                 return entity
 
         return None
+    
+    def get_blocking_entity_at(self, x: int, y: int) -> Optional[game.entity.Entity]:
+        """Alias for get_blocking_entity_at_location"""
+        return self.get_blocking_entity_at_location(x, y)
 
     def in_bounds(self, x: int, y: int) -> bool:
         """Return True if x and y are inside of the bounds of this map."""
