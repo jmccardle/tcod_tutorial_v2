@@ -7,7 +7,7 @@ import random
 import tcod
 
 from game.entity import Entity
-from game.entity_factories import orc, troll
+from game.entity_factories import health_potion, orc, troll
 from game.game_map import GameMap
 from game.tiles import floor
 
@@ -61,8 +61,10 @@ def place_entities(
     room: RectangularRoom,
     dungeon: game.game_map.GameMap,
     maximum_monsters: int,
+    maximum_items: int,
 ) -> None:
     number_of_monsters = random.randint(0, maximum_monsters)
+    number_of_items = random.randint(0, maximum_items)
 
     for _ in range(number_of_monsters):
         x = random.randint(room.x1 + 1, room.x2 - 1)
@@ -76,6 +78,15 @@ def place_entities(
 
             monster.place(x, y, dungeon)
 
+    for _ in range(number_of_items):
+        x = random.randint(room.x1 + 1, room.x2 - 1)
+        y = random.randint(room.y1 + 1, room.y2 - 1)
+
+        if not any(entity.x == x and entity.y == y for entity in dungeon.entities):
+            item = copy.deepcopy(health_potion)
+
+            item.place(x, y, dungeon)
+
 
 def generate_dungeon(
     max_rooms: int,
@@ -84,6 +95,7 @@ def generate_dungeon(
     map_width: int,
     map_height: int,
     max_monsters_per_room: int,
+    max_items_per_room: int,
     engine: game.engine.Engine,
 ) -> game.game_map.GameMap:
     """Generate a new dungeon map."""
@@ -118,7 +130,7 @@ def generate_dungeon(
             for x, y in tunnel_between(rooms[-1].center, new_room.center):
                 dungeon.tiles[x, y] = floor
 
-        place_entities(new_room, dungeon, max_monsters_per_room)
+        place_entities(new_room, dungeon, max_monsters_per_room, max_items_per_room)
 
         # Finally, append the new room to the list.
         rooms.append(new_room)

@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Optional, Tuple, Type, Union
 
 from game.render_order import RenderOrder
 
 if TYPE_CHECKING:
     import game.components.ai
+    import game.components.consumable
     import game.components.fighter
-    import game.game_map
+    import game.components.inventory
+
+from game.game_map import GameMap
 
 
 class Entity:
@@ -15,12 +18,11 @@ class Entity:
     A generic object to represent players, enemies, items, etc.
     """
 
-    # Part 8 refactoring prep: Will become Union[GameMap, Inventory] in Part 8
-    gamemap: Optional[game.game_map.GameMap]
+    parent: Union[GameMap, game.components.inventory.Inventory]
 
     def __init__(
         self,
-        gamemap: Optional[game.game_map.GameMap] = None,
+        parent: Optional[Union[GameMap, game.components.inventory.Inventory]] = None,
         x: int = 0,
         y: int = 0,
         char: str = "?",
@@ -35,19 +37,28 @@ class Entity:
         self.name = name
         self.blocks_movement = blocks_movement
         self.render_order = RenderOrder.CORPSE
-        if gamemap:
-            # If gamemap isn't provided now then it will be set later.
-            self.gamemap = gamemap
-            gamemap.entities.add(self)
+        if parent:
+            # If parent isn't provided now then it will be set later.
+            self.parent = parent
+            if hasattr(parent, "entities"):
+                parent.entities.add(self)
 
-    def place(self, x: int, y: int, gamemap: Optional[game.game_map.GameMap] = None) -> None:
+    @property
+    def gamemap(self) -> GameMap:
+        if isinstance(self.parent, GameMap):
+            return self.parent
+        else:
+            return self.parent.gamemap
+
+    def place(self, x: int, y: int, gamemap: Optional[GameMap] = None) -> None:
         """Place this entity at a new location. Handles moving across GameMaps."""
         self.x = x
         self.y = y
         if gamemap:
-            if hasattr(self, "gamemap") and self.gamemap is not None:  # Possibly uninitialized.
-                self.gamemap.entities.remove(self)
-            self.gamemap = gamemap
+            if hasattr(self, "parent"):  # Possibly uninitialized.
+                if hasattr(self.parent, "entities"):
+                    self.parent.entities.remove(self)
+            self.parent = gamemap
             gamemap.entities.add(self)
 
     def move(self, dx: int, dy: int) -> None:
@@ -67,9 +78,10 @@ class Actor(Entity):
         name: str = "<Unnamed>",
         ai_cls: Type[game.components.ai.BaseAI],
         fighter: game.components.fighter.Fighter,
+        inventory: game.components.inventory.Inventory,
     ):
         super().__init__(
-            gamemap=None,
+            parent=None,
             x=x,
             y=y,
             char=char,
@@ -83,9 +95,41 @@ class Actor(Entity):
         self.fighter = fighter
         self.fighter.parent = self
 
+        self.inventory = inventory
+        self.inventory.parent = self
+
         self.render_order = RenderOrder.ACTOR
 
     @property
     def is_alive(self) -> bool:
         """Returns True as long as this actor can perform actions."""
         return bool(self.ai)
+
+
+class Item(Entity):
+    def __init__(
+        self,
+        *,
+        x: int = 0,
+        y: int = 0,
+        char: str = "?",
+        color: Tuple[int, int, int] = (255, 255, 255),
+        name: str = "<Unnamed>",
+        consumable: Optional[game.components.consumable.Consumable] = None,
+    ):
+        super().__init__(
+            parent=None,
+            x=x,
+            y=y,
+            char=char,
+            color=color,
+            name=name,
+            blocks_movement=False,
+        )
+
+        self.consumable = consumable
+
+        if self.consumable:
+            self.consumable.parent = self
+
+        self.render_order = RenderOrder.ITEM

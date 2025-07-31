@@ -5,12 +5,11 @@ from typing import TYPE_CHECKING, Iterator, Optional, Set
 import numpy as np
 import tcod
 
-from game.entity import Actor
 from game.tiles import SHROUD, wall
+import game.entity
 
 if TYPE_CHECKING:
     import game.engine
-    import game.entity
 
 
 class GameMap:
@@ -31,7 +30,11 @@ class GameMap:
     @property
     def actors(self) -> Iterator[game.entity.Actor]:
         """Iterate over this maps living actors."""
-        yield from (entity for entity in self.entities if isinstance(entity, Actor) and entity.is_alive)
+        yield from (entity for entity in self.entities if isinstance(entity, game.entity.Actor) and entity.is_alive)
+
+    @property
+    def items(self) -> Iterator[game.entity.Item]:
+        yield from (entity for entity in self.entities if isinstance(entity, game.entity.Item))
 
     def get_blocking_entity_at_location(
         self,
@@ -47,6 +50,13 @@ class GameMap:
     def get_blocking_entity_at(self, x: int, y: int) -> Optional[game.entity.Entity]:
         """Alias for get_blocking_entity_at_location"""
         return self.get_blocking_entity_at_location(x, y)
+
+    def get_actor_at_location(self, x: int, y: int) -> Optional[game.entity.Actor]:
+        for actor in self.actors:
+            if actor.x == x and actor.y == y:
+                return actor
+
+        return None
 
     def in_bounds(self, x: int, y: int) -> bool:
         """Return True if x and y are inside of the bounds of this map."""
