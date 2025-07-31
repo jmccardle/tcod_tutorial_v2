@@ -185,3 +185,15 @@ class TakeStairsAction(Action):
             self.engine.message_log.add_message("You descend the staircase.", descend)
         else:
             raise game.exceptions.Impossible("There are no stairs here.")
+
+
+class EquipAction(Action):
+    def __init__(self, entity: game.entity.Actor, item: game.entity.Item):
+        super().__init__(entity)
+
+        self.item = item
+
+    def perform(self) -> None:
+        # Type check to ensure entity is an Actor with equipment
+        assert isinstance(self.entity, game.entity.Actor), "Entity must be an Actor for equipment access"
+        self.entity.equipment.toggle_equip(self.item)
