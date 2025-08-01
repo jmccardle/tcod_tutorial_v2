@@ -1,3 +1,3 @@
-tcod>=11.15
+tcod>=19.3.1
 numpy>=1.18
 Pillow>=8.2.0

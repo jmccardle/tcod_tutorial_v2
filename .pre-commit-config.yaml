@@ -1,0 +1,28 @@
+repos:
+  # Black formatter
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        language_version: python3
+
+  # isort import sorter
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        name: isort
+
+  # MyPy type checker
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        additional_dependencies: []  # Add type stubs here if needed (e.g., types-*)
+        # Run on all files like the GitHub workflow
+        pass_filenames: false
+        args: ["--ignore-missing-imports", "--show-column-numbers", "."]
+
+# Optional settings
+fail_fast: false
+default_stages: [pre-commit]
